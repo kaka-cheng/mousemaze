@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🐭 電腦鼠走迷宮 v3.0.0</title>
+  <title>🐭 電腦鼠走迷宮 v3.1.0</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -108,7 +108,7 @@
   </div>
 
   <div class="wrap">
-    <h1>🐭 電腦鼠走迷宮 <span style="font-size:14px;color:#b38b9b;vertical-align:middle;">v3.0.0</span></h1>
+    <h1>🐭 電腦鼠走迷宮 <span style="font-size:14px;color:#b38b9b;vertical-align:middle;">v3.1.0</span></h1>
     <div class="sub">幫小老鼠找到起司吧！看牠搖搖晃晃地思考前進～</div>
     <canvas id="game" width="480" height="480"></canvas>
     <div class="panel">
@@ -155,7 +155,7 @@
     let aiMode = 'BFS';
     let audioCtx = null;
     let gameMode = 'Normal';
-    let cat = null;
+    let cat = null; // { x, y, dir } patrol cat
     let traps = [];
     let timeLeft = 20;
     let timerId = null;
@@ -174,6 +174,13 @@
       gain.connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function moveCat() {
+      if (!cat) return;
+      const nextX = cat.x + cat.dir;
+      if (maze[cat.y]?.[nextX] === 1) cat.dir *= -1;
+      else cat.x = nextX;
     }
 
     function randomEmptyCell() {
@@ -210,7 +217,7 @@
       visited = [];
       path = [];
       steps = 0;
-      cat = gameMode === 'Cat' ? randomEmptyCell() : null;
+      cat = gameMode === 'Cat' ? { ...randomEmptyCell(), dir: 1 } : null;
       traps = gameMode === 'Trap' ? [randomEmptyCell(), randomEmptyCell()] : [];
       timeLeft = gameMode === 'Time' ? 20 : null;
       if (timerId && (timeLeft === null || timeLeft > 0)) {
@@ -373,6 +380,7 @@
           return;
         }
         mouse = path[i];
+        if (gameMode === 'Cat') moveCat();
         if (cat && mouse.x === cat.x && mouse.y === cat.y) {
           beep(180, 0.2, 'sawtooth', 0.05);
           setMood('panic');
