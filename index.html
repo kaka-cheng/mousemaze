@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🐭 電腦鼠走迷宮 v3.0.0</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans TC", sans-serif;
+      background: linear-gradient(180deg, #fff8f2 0%, #ffeef7 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      color: #5b4b4b;
+    }
+    .wrap {
+      width: min(92vw, 520px);
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.12);
+      padding: 18px;
+      text-align: center;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+    .sub {
+      font-size: 14px;
+      color: #8b7a7a;
+      margin-bottom: 14px;
+    }
+    canvas {
+      width: 100%;
+      max-width: 480px;
+      aspect-ratio: 1/1;
+      background: #fffdf7;
+      border: 4px solid #ffd7e6;
+      border-radius: 20px;
+      display: block;
+      margin: 0 auto 14px;
+    }
+    .panel {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #ff8fb1;
+      color: white;
+      box-shadow: 0 6px 12px rgba(255,143,177,.35);
+    }
+    button:hover { transform: translateY(-1px); }
+    .info {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 14px;
+      background: #fff7fb;
+      padding: 10px 12px;
+      border-radius: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="startScreen" style="position:fixed;inset:0;background:linear-gradient(180deg,#fff8f2 0%,#ffeef7 100%);display:flex;align-items:center;justify-content:center;z-index:20;">
+    <div style="width:min(92vw,420px);background:#fff;border-radius:28px;padding:28px 22px;box-shadow:0 14px 34px rgba(0,0,0,.12);text-align:center;">
+      <div style="font-size:64px;">🐭</div>
+      <h2 style="margin:6px 0 8px;font-size:30px;color:#5b4b4b;">電腦鼠走迷宮</h2>
+      <div style="font-size:14px;color:#8b7a7a;line-height:1.7;margin-bottom:14px;">看著小老鼠自己思考、迷路、再找到香香起司！</div>
+      <div id="guidePage1" style="text-align:left;background:#fff7fb;border-radius:18px;padding:14px 16px;margin-bottom:12px;font-size:13px;color:#6f6161;line-height:1.7;">
+        <div style="font-weight:700;color:#5b4b4b;margin-bottom:6px;">📖 操作說明（1/2）</div>
+        <div>▶ <b>開始找起司</b>：讓小老鼠開始動腦找路</div>
+        <div>🔄 <b>重設迷宮</b>：重新生成新的迷宮與起司位置</div>
+        <div>🧠 <b>模式切換</b>：切換 BFS / Random / A* 三種腦袋</div>
+        <div>🎮 <b>遊戲切換</b>：切換 普通 / 貓咪 / 陷阱 / 限時 模式</div>
+        <div style="margin-top:6px;color:#8b7a7a;">BFS＝穩穩找路｜Random＝笨萌亂晃｜A*＝聰明精算</div>
+        <div style="color:#8b7a7a;">普通＝經典｜貓咪＝避開🐱｜陷阱＝避開🪤｜限時＝20秒倒數</div>
+      </div>
+      <div id="guidePage2" style="display:none;text-align:left;background:#fff7fb;border-radius:18px;padding:14px 16px;margin-bottom:12px;font-size:13px;color:#6f6161;line-height:1.7;">
+        <div style="font-weight:700;color:#5b4b4b;margin-bottom:6px;">🏆 小稱號規則（2/2）</div>
+        <div style="color:#8b7a7a;">🥷 起司忍者＝18步內｜🧠 迷宮達人＝35步內</div>
+        <div style="color:#8b7a7a;">🐭 努力鼠鼠＝35步以上｜😵 暈頭鼠＝找不到路</div>
+        <div style="color:#8b7a7a;">🙀 驚恐鼠＝被貓抓｜🪤 倒楣鼠＝踩陷阱</div>
+        <div style="color:#8b7a7a;">⏰ 壓線鼠＝最後3秒過關</div>
+      </div>
+      <div style="display:flex;justify-content:center;gap:6px;margin-bottom:10px;">
+        <span id="guideDot1" style="width:22px;height:8px;border-radius:999px;background:#ff8fb1;display:inline-block;transition:all .25s ease;"></span>
+        <span id="guideDot2" style="width:8px;height:8px;border-radius:999px;background:#ffd3e1;display:inline-block;transition:all .25s ease;"></span>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:18px;">
+        <button id="guidePrevBtn" style="flex:1;background:#ffd3e1;color:#8a5d6d;box-shadow:none;">◀ 上一頁</button>
+        <button id="guideNextBtn" style="flex:1;box-shadow:none;">下一頁 ▶</button>
+      </div>
+      <button id="enterBtn" style="width:100%;padding:14px 18px;font-size:16px;">🐾 開始遊戲</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <h1>🐭 電腦鼠走迷宮 <span style="font-size:14px;color:#b38b9b;vertical-align:middle;">v3.0.0</span></h1>
+    <div class="sub">幫小老鼠找到起司吧！看牠搖搖晃晃地思考前進～</div>
+    <canvas id="game" width="480" height="480"></canvas>
+    <div class="panel">
+      <button id="startBtn">▶ 開始找起司</button>
+      <button id="resetBtn">🔄 重設迷宮</button>
+      <button id="modeBtn">🧠 模式：BFS</button>
+      <button id="gameBtn">🎮 遊戲：普通</button>
+    </div>
+    <div class="info">
+      <span id="steps">步數：0</span>
+      <span id="status">狀態：待命中</span>
+      <span id="timer">時間：--</span>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const stepsEl = document.getElementById('steps');
+    const statusEl = document.getElementById('status');
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const startScreen = document.getElementById('startScreen');
+    const enterBtn = document.getElementById('enterBtn');
+    const timerEl = document.getElementById('timer');
+    const guidePage1 = document.getElementById('guidePage1');
+    const guidePage2 = document.getElementById('guidePage2');
+    const guidePrevBtn = document.getElementById('guidePrevBtn');
+    const guideDot1 = document.getElementById('guideDot1');
+    const guideDot2 = document.getElementById('guideDot2');
+    const guideNextBtn = document.getElementById('guideNextBtn');
+
+    const N = 12;
+    const size = canvas.width / N;
+    let maze = [];
+    let mouse = { x: 1, y: 1 };
+    let cheese = { x: 10, y: 10 };
+    let visited = [];
+    let path = [];
+    let steps = 0;
+    let running = false;
+    let mouseFrame = 0;
+    let celebration = 0;
+    let aiMode = 'BFS';
+    let audioCtx = null;
+    let gameMode = 'Normal';
+    let cat = null;
+    let traps = [];
+    let timeLeft = 20;
+    let timerId = null;
+    let mood = 'idle';
+    let idleTick = 0;
+    let badge = '起司新手';
+
+    function beep(freq = 440, duration = 0.06, type = 'sine', volume = 0.03) {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.value = volume;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function randomEmptyCell() {
+      let p;
+      do {
+        p = { x: 1 + Math.floor(Math.random() * (N - 2)), y: 1 + Math.floor(Math.random() * (N - 2)) };
+      } while (maze[p.y]?.[p.x] !== 0 || (p.x === mouse.x && p.y === mouse.y) || (p.x === cheese.x && p.y === cheese.y));
+      return p;
+    }
+
+    function generateMaze() {
+      do {
+        maze = Array.from({ length: N }, (_, y) =>
+          Array.from({ length: N }, (_, x) =>
+            x === 0 || y === 0 || x === N-1 || y === N-1 ? 1 : (Math.random() < 0.22 ? 1 : 0)
+          )
+        );
+
+        mouse = { x: 1, y: 1 };
+        const cheeseSpots = [
+          { x: N-2, y: N-2 },
+          { x: N-3, y: 2 },
+          { x: 2, y: N-3 },
+          { x: Math.floor(N/2), y: N-2 },
+          { x: N-2, y: Math.floor(N/2) }
+        ];
+        cheese = cheeseSpots[Math.floor(Math.random() * cheeseSpots.length)];
+        maze[mouse.y][mouse.x] = 0;
+        maze[cheese.y][cheese.x] = 0;
+
+        path = bfs(true);
+      } while (!path.length);
+
+      visited = [];
+      path = [];
+      steps = 0;
+      cat = gameMode === 'Cat' ? randomEmptyCell() : null;
+      traps = gameMode === 'Trap' ? [randomEmptyCell(), randomEmptyCell()] : [];
+      timeLeft = gameMode === 'Time' ? 20 : null;
+      if (timerId && (timeLeft === null || timeLeft > 0)) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+      running = false;
+      setMood('idle');
+      updateInfo('待命中');
+      draw();
+    }
+
+    function setMood(nextMood) {
+      mood = nextMood;
+    }
+
+    function updateInfo(status) {
+      stepsEl.textContent = `步數：${steps}`;
+      statusEl.textContent = `狀態：${status}`;
+      timerEl.textContent = `時間：${timeLeft ?? '--'}`;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let y = 0; y < N; y++) {
+        for (let x = 0; x < N; x++) {
+          const px = x * size, py = y * size;
+          if (maze[y][x] === 1) {
+            ctx.fillStyle = '#caa6b6';
+            ctx.fillRect(px, py, size, size);
+          } else {
+            ctx.fillStyle = '#fffdf7';
+            ctx.fillRect(px, py, size, size);
+          }
+
+          if (visited.some(v => v.x === x && v.y === y)) {
+            ctx.fillStyle = '#dff6ff';
+            ctx.fillRect(px+4, py+4, size-8, size-8);
+          }
+          if (path.some(v => v.x === x && v.y === y)) {
+            ctx.fillStyle = '#ffe89a';
+            ctx.fillRect(px+6, py+6, size-12, size-12);
+          }
+
+          ctx.strokeStyle = '#f4dce5';
+          ctx.strokeRect(px, py, size, size);
+
+          if (traps.some(t => t.x === x && t.y === y)) ctx.fillText('🪤', px + size*0.12, py + size*0.72);
+          if (cat && cat.x === x && cat.y === y) ctx.fillText('🐱', px + size*0.12, py + size*0.72);
+        }
+      }
+
+      const cheeseBob = celebration > 0 ? Math.sin(celebration * 0.35) * 4 : 0;
+      ctx.font = `${size*0.65}px serif`;
+      ctx.fillText('🧀', cheese.x * size + size*0.15, cheese.y * size + size*0.72 + cheeseBob);
+
+      const wobbleX = running ? Math.sin(mouseFrame * 0.7) * 2 : 0;
+      const wobbleY = running ? Math.cos(mouseFrame * 0.7) * 1.5 : 0;
+      idleTick++;
+      const idleMouse = idleTick % 24 < 8 ? '🐭' : idleTick % 24 < 16 ? '🐹' : '🐭';
+      const mouseEmoji = celebration > 0 ? '🐹' : mood === 'panic' ? '🙀' : mood === 'proud' ? '😎' : mood === 'confused' ? '😵' : running ? (mouseFrame % 2 === 0 ? '🐭' : '🐹') : idleMouse;
+      ctx.fillText(mouseEmoji, mouse.x * size + size*0.12 + wobbleX, mouse.y * size + size*0.72 + wobbleY);
+
+      if (!running && mood === 'idle' && idleTick % 40 < 8) {
+        ctx.font = '18px sans-serif';
+        ctx.fillText('💤', mouse.x * size + size*0.7, mouse.y * size + 8);
+      }
+
+      if (celebration > 0) {
+        ctx.font = '22px sans-serif';
+        ctx.fillText('✨', mouse.x * size + size*0.75, mouse.y * size + 10 + Math.sin(celebration * 0.5) * 4);
+      }
+    }
+
+    function idleLoop() {
+      if (!running) draw();
+      requestAnimationFrame(idleLoop);
+    }
+
+    function randomWalk(silent = false) {
+      const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+      let current = { x: mouse.x, y: mouse.y };
+      let result = [{ ...current }];
+      let tries = 0;
+      if (!silent) visited = [{ ...current }];
+
+      while ((current.x !== cheese.x || current.y !== cheese.y) && tries < 120) {
+        const options = dirs
+          .map(([dx, dy]) => ({ x: current.x + dx, y: current.y + dy }))
+          .filter(n => maze[n.y]?.[n.x] === 0);
+
+        current = options[Math.floor(Math.random() * options.length)];
+        result.push({ ...current });
+        if (!silent) visited.push({ ...current });
+        tries++;
+      }
+      return current.x === cheese.x && current.y === cheese.y ? result : [];
+    }
+
+    function bfs(silent = false) {
+      const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+      const q = [{ x: mouse.x, y: mouse.y, p: [] }];
+      const seen = new Set([`${mouse.x},${mouse.y}`]);
+      if (!silent) visited = [];
+
+      while (q.length) {
+        const cur = q.shift();
+        if (!silent) visited.push({ x: cur.x, y: cur.y });
+
+        if (cur.x === cheese.x && cur.y === cheese.y) {
+          return [...cur.p, { x: cur.x, y: cur.y }];
+        }
+
+        for (const [dx, dy] of dirs) {
+          const nx = cur.x + dx, ny = cur.y + dy;
+          const key = `${nx},${ny}`;
+          if (!seen.has(key) && maze[ny]?.[nx] === 0) {
+            seen.add(key);
+            q.push({ x: nx, y: ny, p: [...cur.p, { x: cur.x, y: cur.y }] });
+          }
+        }
+      }
+      return [];
+    }
+
+    async function run() {
+      if (gameMode === 'Time' && !timerId) {
+        timerId = setInterval(() => {
+          timeLeft--;
+          updateInfo('限時中...⏱');
+          if (timeLeft <= 0) {
+            clearInterval(timerId);
+            timerId = null;
+            running = false;
+            updateInfo('時間到！⏰ 請按🔄重設迷宮再玩一次');
+          }
+        }, 1000);
+      }
+      if (running) return;
+      running = true;
+      updateInfo(aiMode === 'Random' ? '亂晃中...🤪' : aiMode === 'A*' ? '精算中...🧠' : '思考中...');
+      path = aiMode === 'Random' ? randomWalk() : bfs();
+      draw();
+
+      if (!path.length) {
+        setMood('confused');
+        updateInfo('找不到起司 QAQ｜請按🔄重設迷宮');
+        if (timerId && (timeLeft === null || timeLeft > 0)) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+      running = false;
+        return;
+      }
+
+      for (let i = 0; i < path.length; i++) {
+        if (gameMode === 'Time' && timeLeft <= 0) {
+          running = false;
+          return;
+        }
+        mouse = path[i];
+        if (cat && mouse.x === cat.x && mouse.y === cat.y) {
+          beep(180, 0.2, 'sawtooth', 0.05);
+          setMood('panic');
+          updateInfo('被貓抓到了！🐱｜請按🔄重設迷宮');
+          if (timerId && (timeLeft === null || timeLeft > 0)) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+      running = false;
+          return;
+        }
+        if (traps.some(t => t.x === mouse.x && t.y === mouse.y)) {
+          beep(220, 0.15, 'square', 0.05);
+          setMood('panic');
+          updateInfo('踩到陷阱！🪤｜請按🔄重設迷宮');
+          if (timerId && (timeLeft === null || timeLeft > 0)) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+      running = false;
+          return;
+        }
+        mouseFrame++;
+        beep(aiMode === 'Random' ? 260 : aiMode === 'A*' ? 520 : 380, 0.04, 'triangle', 0.02);
+        steps = i;
+        updateInfo(i % 2 === 0 ? '找路中...🐾' : '找路中...🐭');
+        draw();
+        await new Promise(r => setTimeout(r, gameMode === 'Time' ? 350 : 150));
+      }
+
+      for (let i = 0; i < 10; i++) {
+        celebration = i + 1;
+        draw();
+        await new Promise(r => setTimeout(r, 80));
+      }
+
+      beep(740, 0.08, 'sine', 0.04);
+      setTimeout(() => beep(880, 0.12, 'sine', 0.04), 90);
+      setMood('proud');
+      badge = steps < 18 ? '起司忍者' : steps < 35 ? '迷宮達人' : '努力鼠鼠';
+      updateInfo(`找到起司！🎉｜${badge}｜下一輪請按🔄重設迷宮`);
+      celebration = 0;
+      if (timerId && (timeLeft === null || timeLeft > 0)) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+      running = false;
+    }
+
+    const modeBtn = document.getElementById('modeBtn');
+    const gameBtn = document.getElementById('gameBtn');
+
+    modeBtn.onclick = () => {
+      beep(620, 0.05, 'square', 0.025);
+      if (running) return;
+      aiMode = aiMode === 'BFS' ? 'Random' : aiMode === 'Random' ? 'A*' : 'BFS';
+      modeBtn.textContent = `🧠 模式：${aiMode}`;
+      updateInfo(aiMode === 'Random' ? '這隻鼠有點ㄎㄧㄤ' : aiMode === 'A*' ? '聰明鼠上線' : '穩穩找路中');
+    };
+
+    gameBtn.onclick = () => {
+      if (running) return;
+      gameMode = gameMode === 'Normal' ? 'Cat' : gameMode === 'Cat' ? 'Trap' : gameMode === 'Trap' ? 'Time' : 'Normal';
+      gameBtn.textContent = `🎮 遊戲：${gameMode === 'Normal' ? '普通' : gameMode === 'Cat' ? '貓咪' : gameMode === 'Trap' ? '陷阱' : '限時'}`;
+      generateMaze();
+    };
+
+    startBtn.onclick = run;
+    resetBtn.onclick = generateMaze;
+    let guidePage = 1;
+    function setGuidePage(page) {
+      guidePage = page;
+      const isPage1 = page === 1;
+      guidePage1.style.display = isPage1 ? 'block' : 'none';
+      guidePage2.style.display = isPage1 ? 'none' : 'block';
+      guideDot1.style.width = isPage1 ? '22px' : '8px';
+      guideDot2.style.width = isPage1 ? '8px' : '22px';
+      guideDot1.style.background = isPage1 ? '#ff8fb1' : '#ffd3e1';
+      guideDot2.style.background = isPage1 ? '#ffd3e1' : '#ff8fb1';
+      guidePrevBtn.style.opacity = isPage1 ? '0.45' : '1';
+      guidePrevBtn.style.background = isPage1 ? '#f3dfe7' : '#ff8fb1';
+      guidePrevBtn.style.color = isPage1 ? '#b79aa7' : '#ffffff';
+      guidePrevBtn.style.transform = isPage1 ? 'scale(0.98)' : 'scale(1)';
+
+      guideNextBtn.style.opacity = isPage1 ? '1' : '0.45';
+      guideNextBtn.style.background = isPage1 ? '#ff8fb1' : '#f3dfe7';
+      guideNextBtn.style.color = isPage1 ? '#ffffff' : '#b79aa7';
+      guideNextBtn.style.transform = isPage1 ? 'scale(1)' : 'scale(0.98)';
+    }
+
+    guidePrevBtn.onclick = () => {
+      if (guidePage === 1) return;
+      beep(520, 0.04, 'square', 0.02);
+      setGuidePage(1);
+    };
+
+    guideNextBtn.onclick = () => {
+      if (guidePage === 2) return;
+      beep(620, 0.04, 'square', 0.02);
+      setGuidePage(2);
+    };
+
+    setGuidePage(1);
+
+    enterBtn.onclick = () => {
+      beep(660, 0.05, 'square', 0.03);
+      startScreen.style.display = 'none';
+    };
+    generateMaze();
+    idleLoop();
+  </script>
+</body>
+</html>
